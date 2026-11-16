@@ -2,9 +2,21 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
+from torchvision import datasets, transforms
 import numpy as np
 
-#Load MNIST dataset
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.1307,), (0.3081,)) 
+])
+
+trainDataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+testDataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+
+trainLoader = DataLoader(trainDataset, batch_size=64, shuffle=True)
+testLoader = DataLoader(testDataset, batch_size=64, shuffle=False)
 
 class CNN(nn.Module):
     def __init__(self):
@@ -24,7 +36,28 @@ class CNN(nn.Module):
         x = self.fc2(x)
         return x
 
-model = CNN()
+model = CNN().to(device)
 optimiser = optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.CrossEntropyLoss()
+
+epochs = 10
+for epoch in range(1, epochs+1):
+        model.train()
+        runningLoss = 0
+
+        for inputs, labels in trainLoader:
+             inputs = inputs.to(device)
+             labels = labels.to(device)
+
+             optimiser.zero_grad()
+             outputs = model(inputs)
+             loss = criterion(outputs, labels)
+             loss.backward()
+             optimiser.step()
+
+             runningLoss += loss.item()
+
+        avgLoss = runningLoss / len(trainLoader)
+        print(f'Epoch {epoch} | Average loss {avgLoss}')
+        runningLoss = 0
 
