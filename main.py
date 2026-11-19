@@ -4,12 +4,13 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision import datasets, transforms
 import numpy as np
+import os
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 transform = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,)) 
+    transforms.Normalize((0.1307,), (0.3081,)) #Normalise the data
 ])
 
 trainDataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
@@ -40,24 +41,33 @@ model = CNN().to(device)
 optimiser = optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.CrossEntropyLoss()
 
-epochs = 10
-for epoch in range(1, epochs+1):
-        model.train()
-        runningLoss = 0
+fileName = 'weights.pth'
+if os.path.exists(fileName):
+    model.load_state_dict(torch.load('weights.pth'))
+else:
+    epochs = 10
+    for epoch in range(1, epochs+1):
+            model.train()
+            runningLoss = 0
 
-        for inputs, labels in trainLoader:
-             inputs = inputs.to(device)
-             labels = labels.to(device)
+            for inputs, labels in trainLoader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
 
-             optimiser.zero_grad()
-             outputs = model(inputs)
-             loss = criterion(outputs, labels)
-             loss.backward()
-             optimiser.step()
+                optimiser.zero_grad()
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
+                loss.backward()
+                optimiser.step()
 
-             runningLoss += loss.item()
+                runningLoss += loss.item()
 
-        avgLoss = runningLoss / len(trainLoader)
-        print(f'Epoch {epoch} | Average loss {avgLoss}')
-        runningLoss = 0
+            avgLoss = runningLoss / len(trainLoader)
+            print(f'Epoch {epoch} | Average loss {avgLoss}')
+            runningLoss = 0
 
+    torch.save(model.state_dict(), 'weights.pth')
+
+model.eval()
+with torch.no_grad():
+    pass
