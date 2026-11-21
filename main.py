@@ -6,7 +6,7 @@ from torchvision import datasets, transforms
 import numpy as np
 import os
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") #Loads to GPU if available
 
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -42,10 +42,10 @@ optimiser = optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.CrossEntropyLoss()
 
 fileName = 'weights.pth'
-if os.path.exists(fileName):
+if os.path.exists(fileName): #Preloads weight and skips
     model.load_state_dict(torch.load('weights.pth'))
 else:
-    epochs = 10
+    epochs = 3
     for epoch in range(1, epochs+1):
             model.train()
             runningLoss = 0
@@ -69,5 +69,23 @@ else:
     torch.save(model.state_dict(), 'weights.pth')
 
 model.eval()
+testLoss = 0
+correct = 0
+total = 0
 with torch.no_grad():
-    pass
+    for inputs, labels in testLoader:
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        testLoss += loss.item() * inputs.size(0) #Makes each batch have an equal contribution to the loss average
+
+        prediction = outputs.argmax(dim=1) #Finds the index of the highest value which lines up with the highest probable digit
+        correct += (prediction == labels).sum().item() #Counts how many of the predictions are the same as the label
+        total += labels.size(0)
+
+
+accuracy = 100*correct/total
+testLossAverage = testLoss/total
+print(f'Accuracy {accuracy} | Average test loss {testLossAverage}')
